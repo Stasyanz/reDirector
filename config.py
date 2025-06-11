@@ -28,6 +28,14 @@ if not SOURCE_CHANNEL_USERNAME:
 if SOURCE_CHANNEL_USERNAME.startswith("@"):
     SOURCE_CHANNEL_USERNAME = SOURCE_CHANNEL_USERNAME[1:]
 
+# ID топика в группе (опционально)
+MESSAGE_THREAD_ID = os.getenv("MESSAGE_THREAD_ID")
+if MESSAGE_THREAD_ID:
+    try:
+        MESSAGE_THREAD_ID = int(MESSAGE_THREAD_ID)
+    except ValueError:
+        raise ValueError("MESSAGE_THREAD_ID должен быть числом")
+
 # ID администратора (опционально)
 ADMIN_ID = os.getenv("ADMIN_ID")
 if ADMIN_ID:

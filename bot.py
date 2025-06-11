@@ -4,7 +4,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.types import Message, ContentType
 from aiogram.filters import Command
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
-from config import BOT_TOKEN, TARGET_GROUP_ID, ADMIN_ID, SOURCE_CHANNEL_USERNAME
+from config import BOT_TOKEN, TARGET_GROUP_ID, ADMIN_ID, SOURCE_CHANNEL_USERNAME, MESSAGE_THREAD_ID
 
 # Настройка логирования
 logging.basicConfig(
@@ -53,30 +53,37 @@ async def status_command(message: Message):
             await message.answer(f"❌ Ошибка доступа к группе: {e}")
 
 
-@dp.message()
-async def forward_message(message: Message):
+@dp.channel_post()
+async def forward_channel_post(message: Message):
     """Пересылка сообщений из канала в группу"""
     try:
-        # Проверяем, что сообщение из канала
-        if not message.chat or message.chat.type != "channel":
-            return
+        # Логируем информацию о полученном посте
+        logger.info(f"📥 Получен пост из канала: {message.chat.title} (@{message.chat.username})")
         
         # Проверяем, что это нужный канал
-        if not message.chat.username or message.chat.username.lower() != SOURCE_CHANNEL_USERNAME.lower():
-            logger.debug(f"Сообщение из неподходящего канала: @{message.chat.username} (ожидается @{SOURCE_CHANNEL_USERNAME})")
+        if not message.chat.username:
+            logger.warning(f"❌ Канал без username: {message.chat.title} (ID: {message.chat.id})")
+            return
+            
+        if message.chat.username.lower() != SOURCE_CHANNEL_USERNAME.lower():
+            logger.info(f"ℹ️ Пост из другого канала: @{message.chat.username} (ожидается @{SOURCE_CHANNEL_USERNAME})")
             return
         
-        # Логируем информацию о сообщении
-        logger.info(f"Получено сообщение из канала @{message.chat.username} ({message.chat.title})")
-        
         # Пересылаем сообщение в целевую группу
-        forwarded = await bot.forward_message(
-            chat_id=TARGET_GROUP_ID,
-            from_chat_id=message.chat.id,
-            message_id=message.message_id
-        )
+        forward_params = {
+            "chat_id": TARGET_GROUP_ID,
+            "from_chat_id": message.chat.id,
+            "message_id": message.message_id
+        }
         
-        logger.info(f"Сообщение успешно переслано в группу {TARGET_GROUP_ID}")
+        # Добавляем топик, если указан
+        if MESSAGE_THREAD_ID:
+            forward_params["message_thread_id"] = MESSAGE_THREAD_ID
+            
+        forwarded = await bot.forward_message(**forward_params)
+        
+        topic_info = f" в топик {MESSAGE_THREAD_ID}" if MESSAGE_THREAD_ID else ""
+        logger.info(f"Сообщение успешно переслано в группу {TARGET_GROUP_ID}{topic_info}")
         
     except TelegramBadRequest as e:
         logger.error(f"Ошибка при пересылке сообщения: {e}")
@@ -91,6 +98,21 @@ async def forward_message(message: Message):
     
     except Exception as e:
         logger.error(f"Неожиданная ошибка: {e}")
+
+
+@dp.edited_channel_post()
+async def forward_edited_channel_post(message: Message):
+    """Пересылка отредактированных сообщений из канала"""
+    logger.info("Получено отредактированное сообщение из канала - пропускаем")
+    # Можно также пересылать отредактированные сообщения, если нужно
+    # await forward_channel_post(message)
+
+
+@dp.message()
+async def handle_regular_messages(message: Message):
+    """Обработчик обычных сообщений (не из канала)"""
+    logger.debug(f"Получено обычное сообщение от {message.from_user.username if message.from_user else 'Unknown'}")
+    # Этот обработчик нужен для команд в личке и группах
 
 
 async def main():
