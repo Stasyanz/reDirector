@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  redirect-bot:
+    build: .
+    container_name: telegram-redirect-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Монтируем только .env для возможности изменения настроек без пересборки
+      - ./.env:/app/.env:ro
+    # Ограничиваем ресурсы для минимального потребления
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.1'
+        reservations:
+          memory: 32M
+          cpus: '0.05'
+    # Политика перезапуска
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('https://api.telegram.org')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s 

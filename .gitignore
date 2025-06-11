@@ -40,4 +40,7 @@ ENV/
 
 # Logs
 *.log
-logs/ 
+logs/
+
+# Docker
+.dockerignore 
