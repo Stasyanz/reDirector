@@ -4,10 +4,14 @@ from dotenv import load_dotenv
 # Загружаем переменные из .env файла
 load_dotenv()
 
+print("🔧 Загрузка конфигурации...")
+
 # Токен бота
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN не установлен в переменных окружения")
+if not BOT_TOKEN or BOT_TOKEN == "YOUR_BOT_TOKEN_HERE":
+    print("❌ Ошибка: BOT_TOKEN не установлен или содержит пример значения")
+    print("📝 Создайте файл .env и укажите реальный токен от @BotFather")
+    exit(1)
 
 # ID группы для пересылки
 TARGET_GROUP_ID = os.getenv("TARGET_GROUP_ID")
